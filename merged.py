@@ -29,6 +29,7 @@ stop_event = Event()
 task = None
 reader = None
 
+acquiring = False
 data_buffer = np.zeros(max_samples, dtype=np.float64)
 time_buffer = np.zeros(max_samples, dtype=np.float64)
 
@@ -43,7 +44,7 @@ def get_tdms_filename():
 
 
 def acquire_data(tdms_file_path):
-    global task, reader, data_buffer, time_buffer
+    global task, reader, data_buffer, time_buffer, acquiring
     idx = 0
 
     while not stop_event.is_set():
@@ -60,50 +61,73 @@ def acquire_data(tdms_file_path):
             time_buffer[-num_to_read:] = (idx + np.arange(num_to_read)) / fs_acq
             idx += num_to_read
 
-            ax.clear()
-            ax.plot(time_buffer, data_buffer, label=device_channel)
-            ax.set_xlabel("Time (s)")
-            ax.set_ylabel("Voltage (V)")
+            line_plot.set_data(time_buffer, data_buffer)
+            ax.relim()
+            ax.autoscale_view()
             ax.set_title("Real-Time Acquisition")
-            ax.legend()
+            ax.legend([device_channel])
             fig.canvas.draw_idle()
 
     task.stop()
     task.close()
+    acquiring = False
+    btn_toggle.label.set_text("Start")
+    btn_load.ax.set_visible(True)
+    btn_export.ax.set_visible(True)
+    fig.canvas.draw_idle()
     print(f"Acquisition stopped. TDMS saved to {tdms_file_path}")
 
 
-def start_acq(event=None):
-    global task, reader, stop_event
-    stop_event.clear()
-    tdms_file_path = get_tdms_filename()
+def toggle_acq(event=None):
+    global task, reader, stop_event, line_plot, acquiring, data_buffer, time_buffer
+    if not acquiring:
+        stop_event.clear()
+        tdms_file_path = get_tdms_filename()
 
-    task = nidaqmx.Task()
-    task.ai_channels.add_ai_voltage_chan(
-        device_channel,
-        terminal_config=TerminalConfiguration.RSE,
-        min_val=-10.0,
-        max_val=10.0,
-        units=VoltageUnits.VOLTS
-    )
-    task.timing.cfg_samp_clk_timing(rate=fs_acq, sample_mode=AcquisitionType.CONTINUOUS)
-    task.in_stream.input_buf_size = buffer_size * 10
-    task.in_stream.configure_logging(file_path=tdms_file_path, logging_mode=LoggingMode.LOG_AND_READ)
+        data_buffer = np.zeros(max_samples, dtype=np.float64)
+        time_buffer = np.zeros(max_samples, dtype=np.float64)
 
-    reader = AnalogSingleChannelReader(task.in_stream)
-    task.start()
+        ax.clear()
+        line_plot, = ax.plot([], [], label=device_channel)
+        ax.set_xlabel("Time (s)")
+        ax.set_ylabel("Voltage (V)")
+        ax.set_title("Real-Time Acquisition")
+        ax.legend()
+        fig.canvas.draw()
 
-    acq_thread = Thread(target=acquire_data, args=(tdms_file_path,), daemon=True)
-    acq_thread.start()
-    print("Acquisition started...")
+        task = nidaqmx.Task()
+        task.ai_channels.add_ai_voltage_chan(
+            device_channel,
+            terminal_config=TerminalConfiguration.RSE,
+            min_val=-10.0,
+            max_val=10.0,
+            units=VoltageUnits.VOLTS
+        )
+        task.timing.cfg_samp_clk_timing(rate=fs_acq, sample_mode=AcquisitionType.CONTINUOUS)
+        task.in_stream.input_buf_size = buffer_size * 10
+        task.in_stream.configure_logging(file_path=tdms_file_path, logging_mode=LoggingMode.LOG_AND_READ)
 
+        reader = AnalogSingleChannelReader(task.in_stream)
+        task.start()
 
-def stop_acq(event=None):
-    stop_event.set()
+        acq_thread = Thread(target=acquire_data, args=(tdms_file_path,), daemon=True)
+        acq_thread.start()
+        acquiring = True
+        btn_toggle.label.set_text("Stop")
+        btn_load.ax.set_visible(False)
+        btn_export.ax.set_visible(False)
+        fig.canvas.draw_idle()
+        print("Acquisition started...")
+    else:
+        stop_event.set()
 
 
 def load_and_plot(event=None):
-    global current_time_axis, current_channel_data
+    global current_time_axis, current_channel_data, line_plot
+    if acquiring:
+        print("Cannot load TDMS while acquiring!")
+        return
+
     Tk().withdraw()
     file_path = askopenfilename(
         title="Select TDMS file",
@@ -141,6 +165,10 @@ def load_and_plot(event=None):
 
 def export_csv(event=None):
     global current_time_axis, current_channel_data
+    if acquiring:
+        print("Cannot export while acquiring!")
+        return
+
     if current_time_axis is None or current_channel_data is None:
         print("No data to export!")
         return
@@ -163,19 +191,15 @@ def export_csv(event=None):
     print(f"Data exported to {file_path}")
 
 
-ax_start = plt.axes([0.02, 0.88, 0.1, 0.07])
-btn_start = Button(ax_start, "Start")
-btn_start.on_clicked(start_acq)
+ax_toggle = plt.axes([0.02, 0.88, 0.1, 0.07])
+btn_toggle = Button(ax_toggle, "Start")
+btn_toggle.on_clicked(toggle_acq)
 
-ax_stop = plt.axes([0.14, 0.88, 0.1, 0.07])
-btn_stop = Button(ax_stop, "Stop")
-btn_stop.on_clicked(stop_acq)
-
-ax_load = plt.axes([0.26, 0.88, 0.15, 0.07])
+ax_load = plt.axes([0.14, 0.88, 0.15, 0.07])
 btn_load = Button(ax_load, "Load TDMS")
 btn_load.on_clicked(load_and_plot)
 
-ax_export = plt.axes([0.42, 0.88, 0.15, 0.07])
+ax_export = plt.axes([0.3, 0.88, 0.15, 0.07])
 btn_export = Button(ax_export, "Export CSV")
 btn_export.on_clicked(export_csv)
 
