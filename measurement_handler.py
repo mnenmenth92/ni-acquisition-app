@@ -24,7 +24,8 @@ class MeasurementHandler(HardwareBase):
             self.channel_dict[name] = {
                 'channel': parts[0],
                 'terminal': parts[1],
-                'scale': parts[2] if len(parts) > 2 else None
+                'scale': parts[2] if len(parts) > 2 else None,
+                'max': int(parts[3])
             }
 
         self.task = None
@@ -94,7 +95,8 @@ class MeasurementHandler(HardwareBase):
                     f"{self.device}/{ch_info['channel']}",
                     terminal_config=term_conf,
                     units=VoltageUnits.FROM_CUSTOM_SCALE,
-                    custom_scale_name=ch_info['scale']
+                    custom_scale_name=ch_info['scale'],
+                    max_val=ch_info['max']
                 )
             else:
                 self.task.ai_channels.add_ai_voltage_chan(

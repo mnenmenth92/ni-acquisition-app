@@ -49,7 +49,7 @@ class MainApp(QMainWindow):
         layout.setSpacing(5)
 
         # Plot widget
-        self.plot_widget = pg.PlotWidget(title="DAQ Measurement & TDMS Viewer")
+        self.plot_widget = pg.PlotWidget(title="DAQ Measurement")
         self.plot_widget.setLabel("bottom", "Time", units="s")
         self.plot_widget.setLabel("left", "Voltage", units="V")
         self.plot_widget.showGrid(x=True, y=True)
