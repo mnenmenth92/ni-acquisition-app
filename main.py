@@ -20,7 +20,7 @@ class MainApp(QMainWindow):
         super().__init__()
         app_version = "1.0.0"  # keep it on top of __init__()
 
-        self.setWindowTitle("DAQ Measurement")
+        self.setWindowTitle("NI Acquisition App")
         self.resize(1000, 600)
 
 
