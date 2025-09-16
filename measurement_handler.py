@@ -8,6 +8,8 @@ from datetime import datetime
 from threading import Thread, Event
 from hardware_base import HardwareBase
 import sys
+import tkinter as tk
+from tkinter import messagebox
 
 """
 Safe version check for nidaqmx
@@ -115,35 +117,55 @@ class MeasurementHandler(HardwareBase):
         self.time_buffer[:] = 0
 
         self.task = nidaqmx.Task()
-        for ch_name, ch_info in self.channel_dict.items():
-            term_conf = getattr(TerminalConfiguration, ch_info['terminal'])
-            if ch_info['scale']:
-                self.task.ai_channels.add_ai_voltage_chan(
-                    f"{self.device}/{ch_info['channel']}",
-                    terminal_config=term_conf,
-                    units=VoltageUnits.FROM_CUSTOM_SCALE,
-                    custom_scale_name=ch_info['scale'],
-                    max_val=ch_info['max']
+        try:
+            for ch_name, ch_info in self.channel_dict.items():
+                term_conf = getattr(TerminalConfiguration, ch_info['terminal'])
+                if ch_info['scale']:
+                    self.task.ai_channels.add_ai_voltage_chan(
+                        f"{self.device}/{ch_info['channel']}",
+                        terminal_config=term_conf,
+                        units=VoltageUnits.FROM_CUSTOM_SCALE,
+                        custom_scale_name=ch_info['scale'],
+                        max_val=ch_info['max']
+                    )
+                else:
+                    self.task.ai_channels.add_ai_voltage_chan(
+                        f"{self.device}/{ch_info['channel']}",
+                        terminal_config=term_conf)
+
+            self.task.timing.cfg_samp_clk_timing(rate=self.sample_rate,
+                                                 sample_mode=AcquisitionType.CONTINUOUS,
+                                                 samps_per_chan=1000)
+            self.task.in_stream.input_buf_size = 10000
+            self.task.in_stream.configure_logging(file_path=self.tdms_file_path,
+                                                  logging_mode=LoggingMode.LOG_AND_READ)
+
+            self.reader = AnalogMultiChannelReader(self.task.in_stream)
+            self.task.start()
+
+            acq_thread = Thread(target=self._acquire_loop, args=(self.tdms_file_path,), daemon=True)
+            acq_thread.start()
+            self.acquiring = True
+        except Exception as e:
+
+            root = tk.Tk()
+            root.withdraw()  # hide main window
+            if "Custom scale specified does not exist" in str(e):
+                messagebox.showerror(
+                    "Missing NI MAX Scale",
+                    f"The custom scale '{ch_info['scale']}' does not exist.\n\n"
+                    f"Please create this scale in NI MAX and restart acquisition."
                 )
             else:
-                self.task.ai_channels.add_ai_voltage_chan(
-                    f"{self.device}/{ch_info['channel']}",
-                    terminal_config=term_conf)
-
-        self.task.timing.cfg_samp_clk_timing(rate=self.sample_rate,
-                                             sample_mode=AcquisitionType.CONTINUOUS,
-                                             samps_per_chan=1000)
-        self.task.in_stream.input_buf_size = 10000
-        self.task.in_stream.configure_logging(file_path=self.tdms_file_path,
-                                              logging_mode=LoggingMode.LOG_AND_READ)
-
-        self.reader = AnalogMultiChannelReader(self.task.in_stream)
-        self.task.start()
-
-        acq_thread = Thread(target=self._acquire_loop, args=(self.tdms_file_path,), daemon=True)
-        acq_thread.start()
-        self.acquiring = True
-
+                messagebox.showerror(
+                    "Missing NI MAX Issue",
+                    f"Task creation issue.\n\n"
+                    f"Not defined NI task creation issue."
+                )
+            if self.task:
+                self.task.close()
+            self.task = None
+            self.acquiring = False
     def stop_acquisition(self):
         if self.acquiring:
             self.stop_event.set()
