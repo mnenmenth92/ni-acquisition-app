@@ -5,12 +5,12 @@ import pyqtgraph as pg
 import pyqtgraph.exporters
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QFileDialog, QMessageBox
+    QPushButton, QFileDialog, QMessageBox, QLabel
 )
 from measurement_handler import MeasurementHandler
 from tdms_handler import TdmsHandler
 
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, Signal, Qt
 
 class PlotUpdater(QObject):
     data_ready = Signal(object, object)  # time_buffer, data_buffer
@@ -18,8 +18,11 @@ class PlotUpdater(QObject):
 class MainApp(QMainWindow):
     def __init__(self, config_path: str):
         super().__init__()
+        app_version = "1.0.0"  # keep it on top of __init__()
+
         self.setWindowTitle("DAQ Measurement")
         self.resize(1000, 600)
+
 
 
         # Change plot background/foreground colors
@@ -97,6 +100,11 @@ class MainApp(QMainWindow):
             button_layout.addWidget(btn)
 
         button_layout.addStretch()
+
+        version_label = QLabel(app_version)
+        version_label.setStyleSheet("color: darkgrey; font-size: 10px;")
+        button_layout.addWidget(version_label, alignment=Qt.AlignRight | Qt.AlignBottom)
+        button_layout.setContentsMargins(10, 0, 5, 0)  # left, top, right, bottom
 
     def toggle_acq(self):
         if not self.mh.is_acquiring():
