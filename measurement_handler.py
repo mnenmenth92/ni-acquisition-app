@@ -7,17 +7,44 @@ import configparser
 from datetime import datetime
 from threading import Thread, Event
 from hardware_base import HardwareBase
+import sys
 
+"""
+Safe version check for nidaqmx
+Reason: When running a PyInstaller executable, importlib.metadata
+may fail to find package metadata for nidaqmx, causing a crash.
+This try/except ensures a fallback version is used so the program runs.
+"""
+
+try:
+    from importlib.metadata import version
+    nidaqmx_version = version("nidaqmx")
+except Exception:
+    nidaqmx_version = "1.2.0"  # hard-coded version
 
 
 
 class MeasurementHandler(HardwareBase):
     def __init__(self, config_path: str):
+
+        # Determine base path depending on environment
+        if getattr(sys, 'frozen', False):
+            # Running inside PyInstaller exe
+            base_path = os.path.dirname(sys.executable)
+        else:
+            # Running as a normal script
+            base_path = os.path.dirname(os.path.abspath(__file__))
+
+        # Full path to config.ini
+        self.config_path = os.path.join(base_path, "config.ini")
+
+        # Load config
         self.config = configparser.ConfigParser()
-        self.config.optionxform = str
-        self.config.read(config_path)
+        self.config.read(self.config_path)
 
         self.device = self.config.get("global", "device")
+
+
         self.channel_dict = {}
         for name, val in self.config.items("channels"):
             parts = [p.strip() for p in val.split(",")]
