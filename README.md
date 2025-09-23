@@ -25,6 +25,7 @@ Measurement app with easy channel and scale configuration, and reliable data log
 
 **Known Issues:**  
 - TDMS reader currently displays physical channel names instead of configured channel names
+- TDMS files are saved in a non-intuitive directory, and the TDMS load function does not automatically open that location.
 
 **Planned Features:**  
 - Support for multiple Y-axes to plot different physical quantities with independent scales
