@@ -54,7 +54,7 @@ class MainApp(QMainWindow):
         # Plot widget
         self.plot_widget = pg.PlotWidget(title="NI Acquisition App")
         self.plot_widget.setLabel("bottom", "Time", units="s")
-        self.plot_widget.setLabel("left", "Voltage", units="V")
+        self.plot_widget.setLabel("left", "Amplitude")
         self.plot_widget.showGrid(x=True, y=True)
         self.plot_widget.addLegend()
         # self.plot_widget.setBackground(None)
@@ -67,7 +67,7 @@ class MainApp(QMainWindow):
 
 
         # Initialize plot with channel curves
-        self.create_curves(self.mh.channel_names)
+        self.create_curves()
 
         self.btn_toggle = QPushButton("Start")
         self.btn_toggle.clicked.connect(self.toggle_acq)
@@ -111,7 +111,7 @@ class MainApp(QMainWindow):
             # Reset curves and internal buffers for clean acquisition
             self.current_time_axis = None
             self.current_channel_data = None
-            self.create_curves(self.mh.channel_names)
+            self.create_curves()
 
             # Start acquisition
             self.mh.start_acquisition()
@@ -234,7 +234,7 @@ class MainApp(QMainWindow):
         QMessageBox.information(self, "Success", f"Plot exported to {file_path}")
 
 
-    def create_curves(self, channel_names, time_axis=None, data_dict=None):
+    def create_curves(self, time_axis=None, data_dict=None):
         """
         Create curves with assigned colors.
 
@@ -243,22 +243,27 @@ class MainApp(QMainWindow):
         - time_axis: optional, x-axis data (for TDMS)
         - data_dict: optional, dictionary of channel -> y-axis data (for TDMS)
         """
+
+
+
         self.plot_widget.clear()
         self.curves.clear()
 
         colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k']  # default color cycle
         self.channel_colors = {}
 
-        for i, ch_name in enumerate(channel_names):
+        for i, ch_name in enumerate(self.mh.channel_names):
+            legend_txt = f'{ch_name}[{self.mh.channel_units[i]}]'
+
             color = colors[i % len(colors)]
             self.channel_colors[ch_name] = color
 
             if data_dict is not None and time_axis is not None:
                 y_data = data_dict[ch_name]
-                curve = self.plot_widget.plot(time_axis, y_data, pen=pg.mkPen(color=color, width=2), name=ch_name)
+                curve = self.plot_widget.plot(time_axis, y_data, pen=pg.mkPen(color=color, width=2), name=legend_txt)
             else:
                 # initialize empty curve for live acquisition
-                curve = self.plot_widget.plot([], [], pen=pg.mkPen(color=color, width=2), name=ch_name)
+                curve = self.plot_widget.plot([], [], pen=pg.mkPen(color=color, width=2), name=legend_txt)
 
             self.curves[ch_name] = curve
 

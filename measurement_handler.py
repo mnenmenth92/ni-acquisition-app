@@ -54,7 +54,8 @@ class MeasurementHandler(HardwareBase):
                 'channel': parts[0],
                 'terminal': parts[1],
                 'scale': parts[2] if len(parts) > 2 else None,
-                'max': int(parts[3])
+                'max': int(parts[3]),
+                'unit': parts[4]
             }
 
         self.task = None
@@ -65,6 +66,7 @@ class MeasurementHandler(HardwareBase):
         self.sample_rate = 100
         self.max_samples = self.sample_rate * 60
         self.channel_names = list(self.channel_dict.keys())
+        self.channel_units = [x['unit'] for x in list(self.channel_dict.values())]
         self.data_buffer = np.zeros((len(self.channel_names), self.max_samples), dtype=np.float64)
         self.time_buffer = np.zeros(self.max_samples, dtype=np.float64)
 
