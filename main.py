@@ -249,7 +249,21 @@ class MainApp(QMainWindow):
         self.plot_widget.clear()
         self.curves.clear()
 
-        colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k']  # default color cycle
+        # colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k']  # default color cycle
+        colors = [
+            (255, 0, 0),  # Red
+            (0, 255, 0),  # Green
+            (0, 0, 255),  # Blue
+            (165, 42, 42),  # Brown
+            (255, 0, 255),  # Magenta
+            (0, 255, 255),  # Cyan
+            (64, 64, 64),  # Dark Gray 
+            (0, 128, 0),  # Dark Green
+            (0, 0, 128),  # Navy
+            (255, 165, 0),  # Orange
+            (128, 0, 128),  # Purple
+            (0, 128, 128)  # Teal
+        ]
         self.channel_colors = {}
 
         for i, ch_name in enumerate(self.mh.channel_names):
