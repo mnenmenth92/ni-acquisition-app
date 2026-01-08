@@ -45,7 +45,7 @@ class MeasurementHandler(HardwareBase):
         self.config.read(self.config_path)
 
         self.device = self.config.get("global", "device")
-
+        self.report_path = self.config.get("global", "report_path")
 
         self.channel_dict = {}
         for name, val in self.config.items("channels"):
@@ -74,10 +74,9 @@ class MeasurementHandler(HardwareBase):
         self.tdms_file_path = None
 
     def _get_tdms_filename(self):
-        save_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Measurements")
-        os.makedirs(save_dir, exist_ok=True)
+        os.makedirs(self.report_path, exist_ok=True)
         dt_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-        return os.path.join(save_dir, f"measurement_{dt_str}.tdms")
+        return os.path.join(self.report_path, f"measurement_{dt_str}.tdms")
 
     def _acquire_loop(self, tdms_file_path):
         idx = 0
@@ -125,6 +124,7 @@ class MeasurementHandler(HardwareBase):
                 if ch_info['scale']:
                     self.task.ai_channels.add_ai_voltage_chan(
                         f"{self.device}/{ch_info['channel']}",
+                        name_to_assign_to_channel=ch_name,
                         terminal_config=term_conf,
                         units=VoltageUnits.FROM_CUSTOM_SCALE,
                         custom_scale_name=ch_info['scale'],
@@ -133,6 +133,7 @@ class MeasurementHandler(HardwareBase):
                 else:
                     self.task.ai_channels.add_ai_voltage_chan(
                         f"{self.device}/{ch_info['channel']}",
+                        name_to_assign_to_channel=ch_name,
                         terminal_config=term_conf)
 
             self.task.timing.cfg_samp_clk_timing(rate=self.sample_rate,

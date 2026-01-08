@@ -95,6 +95,7 @@ class MainApp(QMainWindow):
             self.btn_autoscale
         ]
 
+
         for btn in buttons:
             btn.setFixedSize(80, 30)  # set uniform size
             button_layout.addWidget(btn)
@@ -160,7 +161,7 @@ class MainApp(QMainWindow):
             return
 
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Select TDMS file", os.path.dirname(os.path.abspath(__file__)),
+            self, "Select TDMS file", self.mh.report_path,
             "TDMS files (*.tdms)"
         )
         if not file_path:
@@ -170,7 +171,8 @@ class MainApp(QMainWindow):
         self.current_time_axis = tdms.get_time_axis()
         self.current_channel_data = tdms.get_data()
 
-        self.create_curves(list(self.current_channel_data.keys()),
+        # self.create_curves(list(self.current_channel_data.keys()),
+        self.create_curves(
                            time_axis=self.current_time_axis,
                            data_dict=self.current_channel_data)
         self.view_box.enableAutoRange(axis=pg.ViewBox.XYAxes)
@@ -271,7 +273,6 @@ class MainApp(QMainWindow):
 
             color = colors[i % len(colors)]
             self.channel_colors[ch_name] = color
-
             if data_dict is not None and time_axis is not None:
                 y_data = data_dict[ch_name]
                 curve = self.plot_widget.plot(time_axis, y_data, pen=pg.mkPen(color=color, width=2), name=legend_txt)
