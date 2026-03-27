@@ -58,6 +58,14 @@ class MeasurementHandler(HardwareBase):
                 'unit': parts[4]
             }
 
+        self.fixed_lines = []
+        if self.config.has_section("fixed_lines"):
+            for key, val in self.config.items("fixed_lines"):
+                try:
+                    self.fixed_lines.append(float(val))
+                except (ValueError, TypeError):
+                    pass  # skip missing, None, or non-numerical values
+
         self.task = None
         self.reader = None
         self.stop_event = Event()

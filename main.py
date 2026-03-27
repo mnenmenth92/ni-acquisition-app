@@ -144,9 +144,12 @@ class MainApp(QMainWindow):
 
         # Autoscale Y only
         if self.mh.is_acquiring():
-            # compute min/max across all channels
+            # compute min/max across all channels, include fixed lines
             y_min = np.min(data_buffer)
             y_max = np.max(data_buffer)
+            if self.mh.fixed_lines:
+                y_min = min(y_min, min(self.mh.fixed_lines))
+                y_max = max(y_max, max(self.mh.fixed_lines))
             self.view_box.setYRange(y_min, y_max, padding=0.1)
             self.view_box.setXRange(time_buffer[0], time_buffer[-1], padding=0.0)
 
@@ -250,6 +253,9 @@ class MainApp(QMainWindow):
 
         self.plot_widget.clear()
         self.curves.clear()
+        legend = self.plot_widget.getPlotItem().legend
+        if legend is not None:
+            legend.clear()
 
         # colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k']  # default color cycle
         colors = [
@@ -284,6 +290,23 @@ class MainApp(QMainWindow):
 
         # add legend
         self.plot_widget.addLegend()
+
+        # Add fixed horizontal reference lines (dashed black)
+        fixed_pen = pg.mkPen(color='r', width=2, style=Qt.PenStyle.DashLine)
+        legend = self.plot_widget.getPlotItem().legend
+        for level in self.mh.fixed_lines:
+            line = pg.InfiniteLine(pos=level, angle=0, pen=fixed_pen)
+            self.plot_widget.addItem(line)
+            # add a proxy item so the line appears in the legend
+            proxy = pg.PlotDataItem(pen=fixed_pen)
+            legend.addItem(proxy, f'ref: {level:.0f}')
+
+        # Set initial Y range to include fixed lines when there is no data yet
+        if self.mh.fixed_lines and time_axis is None:
+            self.view_box.setYRange(
+                min(0, min(self.mh.fixed_lines)),
+                max(self.mh.fixed_lines) * 1.1
+            )
 
 
 def main():
